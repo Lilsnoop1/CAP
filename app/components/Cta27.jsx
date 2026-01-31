@@ -7,12 +7,12 @@ export default function Cta27() {
   return (
     <section
       id="relume"
-      className="relative overflow-hidden px-[5%] py-16 md:py-24 lg:py-28 min-h-[70vh] flex items-center"
+      className="relative overflow-hidden px-[5%] py-16 md:py-24 lg:py-28 min-h-[100vh] md:min-h-[85vh] flex items-center"
     >
       <div className="absolute inset-0 -z-10">
         <img
           src="https://images.unsplash.com/photo-1559136555-9303baea8ebd?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80"
-          className="size-full object-cover object-center"
+          className="h-full w-full min-h-full object-cover object-center"
           alt="People in discussion representing community and conversation"
         />
         <div className="absolute inset-0 bg-gradient-to-bl from-black/45 via-black/35 to-black/55" />

@@ -67,6 +67,14 @@ export default function AdminPortal({ userRole }) {
     profileImageUrl: "",
   });
   const [subscriptions, setSubscriptions] = useState([]);
+  const [editingEvent, setEditingEvent] = useState(null);
+  const [eventDraft, setEventDraft] = useState({
+    title: "",
+    description: "",
+    date: "",
+    time: "",
+    location: "",
+  });
 
   const [loading, setLoading] = useState(false);
   const [selectedContent, setSelectedContent] = useState(null);
@@ -585,8 +593,55 @@ export default function AdminPortal({ userRole }) {
   };
 
   const deleteEvent = async (id) => {
-    await fetch(`/api/events/${id}`, { method: "DELETE", credentials: "include" });
-    await fetchEvents();
+    try {
+      const res = await fetch(`/api/events/${id}`, { method: "DELETE", credentials: "include" });
+      if (!res.ok) throw new Error("Failed to delete");
+      await fetchEvents();
+    } catch (err) {
+      console.error(err);
+      setError("Failed to delete event");
+    }
+  };
+
+  const startEditEvent = (ev) => {
+    setEditingEvent(ev);
+    setEventDraft({
+      title: ev.title || "",
+      description: ev.description || "",
+      date: ev.date ? ev.date.slice(0, 10) : "",
+      time: ev.time || "",
+      location: ev.location || "",
+    });
+  };
+
+  const cancelEditEvent = () => {
+    setEditingEvent(null);
+    setEventDraft({
+      title: "",
+      description: "",
+      date: "",
+      time: "",
+      location: "",
+    });
+  };
+
+  const saveEditEvent = async () => {
+    if (!editingEvent) return;
+    const payload = { ...eventDraft };
+    try {
+      const res = await fetch(`/api/events/${editingEvent.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error("Failed to update");
+      setEditingEvent(null);
+      await fetchEvents();
+    } catch (err) {
+      console.error(err);
+      setError("Failed to update event");
+    }
   };
 
   const createYoutube = async () => {
@@ -1186,23 +1241,80 @@ export default function AdminPortal({ userRole }) {
               {events.map((ev) => (
                 <div
                   key={ev.id}
-                  className="rounded-md border border-border-primary/70 bg-background-secondary p-3"
+                  className="rounded-md border border-border-primary/70 bg-background-secondary p-3 space-y-2"
                 >
-                  <p className="text-sm font-semibold">{ev.title}</p>
-                  <p className="text-xs text-muted-foreground">{ev.date}</p>
-                  <p className="text-xs text-muted-foreground">{ev.time}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {ev.location}
-                  </p>
-                  <div className="mt-2 flex justify-end">
-                    <Button
-                      size="xs"
-                      variant="destructive"
-                      onClick={() => deleteEvent(ev.id)}
-                    >
-                      Delete
-                    </Button>
-                  </div>
+                  {editingEvent?.id === ev.id ? (
+                    <div className="space-y-2">
+                      <input
+                        className="w-full rounded-md border border-border-primary bg-background-primary px-2 py-1 text-sm"
+                        value={eventDraft.title}
+                        onChange={(e) => setEventDraft((p) => ({ ...p, title: e.target.value }))}
+                        placeholder="Title"
+                      />
+                      <textarea
+                        className="w-full rounded-md border border-border-primary bg-background-primary px-2 py-1 text-sm"
+                        value={eventDraft.description}
+                        onChange={(e) =>
+                          setEventDraft((p) => ({ ...p, description: e.target.value }))
+                        }
+                        placeholder="Description"
+                        rows={2}
+                      />
+                      <div className="grid grid-cols-2 gap-2">
+                        <input
+                          type="date"
+                          className="w-full rounded-md border border-border-primary bg-background-primary px-2 py-1 text-sm"
+                          value={eventDraft.date}
+                          onChange={(e) =>
+                            setEventDraft((p) => ({ ...p, date: e.target.value }))
+                          }
+                        />
+                        <input
+                          type="time"
+                          className="w-full rounded-md border border-border-primary bg-background-primary px-2 py-1 text-sm"
+                          value={eventDraft.time}
+                          onChange={(e) =>
+                            setEventDraft((p) => ({ ...p, time: e.target.value }))
+                          }
+                        />
+                      </div>
+                      <input
+                        className="w-full rounded-md border border-border-primary bg-background-primary px-2 py-1 text-sm"
+                        value={eventDraft.location}
+                        onChange={(e) =>
+                          setEventDraft((p) => ({ ...p, location: e.target.value }))
+                        }
+                        placeholder="Location"
+                      />
+                      <div className="flex items-center justify-end gap-2 pt-1">
+                        <Button size="xs" variant="secondary" onClick={cancelEditEvent}>
+                          Cancel
+                        </Button>
+                        <Button size="xs" onClick={saveEditEvent}>
+                          Save
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-sm font-semibold">{ev.title}</p>
+                      <p className="text-xs text-muted-foreground">{ev.date}</p>
+                      <p className="text-xs text-muted-foreground">{ev.time}</p>
+                      <p className="text-xs text-muted-foreground">{ev.location}</p>
+                      <div className="mt-2 flex justify-end gap-2">
+                        <Button size="xs" variant="secondary" onClick={() => startEditEvent(ev)}>
+                          Edit
+                        </Button>
+                        <Button
+                          size="xs"
+                          variant="destructive"
+                          onClick={() => deleteEvent(ev.id)}
+                        >
+                          Delete
+                        </Button>
+                      </div>
+                    </>
+                  )}
                 </div>
               ))}
               {events.length === 0 && (

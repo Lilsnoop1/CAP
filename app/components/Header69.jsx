@@ -10,12 +10,12 @@ export default function Header69({
   return (
     <section
       id="relume"
-      className="relative overflow-hidden px-[5%] py-16 md:py-24 lg:py-28"
+      className="relative overflow-hidden px-[5%] py-16 md:py-24 lg:py-28 min-h-[100vh] md:min-h-[85vh] flex items-center"
     >
       <div className="absolute inset-0 -z-10">
         <img
           src={imageUrl}
-          className="h-full w-full object-cover object-center"
+          className="h-full w-full min-h-full object-cover object-center"
           alt={title}
         />
         <div className="absolute inset-0 bg-gradient-to-br from-black/45 via-black/35 to-black/50" />
