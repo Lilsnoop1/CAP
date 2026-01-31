@@ -1,15 +1,11 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
-import { usePathname, useSearchParams } from "next/navigation";
+import React, { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 
 export default function PageTransition({ children }) {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const key = useMemo(
-    () => `${pathname}?${searchParams?.toString() || ""}`,
-    [pathname, searchParams]
-  );
+  const key = pathname || "/";
   const [isVisible, setIsVisible] = useState(true);
 
   useEffect(() => {
