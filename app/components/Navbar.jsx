@@ -194,7 +194,7 @@ export default function Navbar() {
                 className="bg-background-primary lg:absolute lg:z-50 lg:border lg:border-border-primary lg:p-2 lg:[--y-close:25%]"
               >
                 <Link
-                  href="https://journal.capthinktak.com"
+                  href="https://journal.capthinktank.com"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="block py-3 pl-[5%] text-md lg:px-4 lg:py-2 lg:text-base"

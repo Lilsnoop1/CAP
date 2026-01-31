@@ -6,6 +6,11 @@ import PageTransition from "./components/PageTransition.jsx";
 export const metadata = {
   title: "Center of Alternative Perspectives",
   description: "CAP website migrated to Next.js 15 with Tailwind and Relume UI.",
+  icons: {
+    icon: "/cap-logo.jpg",
+    shortcut: "/cap-logo.jpg",
+    apple: "/cap-logo.jpg",
+  },
 };
 
 export default function RootLayout({ children }) {
