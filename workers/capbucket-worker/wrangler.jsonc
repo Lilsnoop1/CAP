@@ -1,0 +1,14 @@
+{
+	"name": "capbucket-worker",
+	"main": "src/index.js",
+	"compatibility_date": "2024-12-01",
+  
+	"account_id": "26dc307587c029d1917fdfd5f929e6e9",
+  
+	"r2_buckets": [
+	  {
+		"binding": "CAP_BUCKET",
+		"bucket_name": "capbucket"
+	  }
+	]
+  }
