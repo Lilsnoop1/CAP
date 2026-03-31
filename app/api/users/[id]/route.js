@@ -16,7 +16,7 @@ export async function GET(request, { params }) {
       )
     }
 
-    const { id } = params
+    const { id } = await params
 
     // Users can view their own profile, admins can view any profile
     if (currentUser.id !== id && !isAdmin(currentUser)) {
@@ -89,7 +89,7 @@ export async function PUT(request, { params }) {
       )
     }
 
-    const { id } = params
+    const { id } = await params
     const user = await prisma.user.findUnique({
       where: { id },
     })
@@ -188,7 +188,7 @@ export async function DELETE(request, { params }) {
       )
     }
 
-    const { id } = params
+    const { id } = await params
     const user = await prisma.user.findUnique({
       where: { id },
     })

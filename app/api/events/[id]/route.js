@@ -6,7 +6,7 @@ import { isEditorOrAdmin } from '@/lib/auth'
 // GET - Get single event by ID
 export async function GET(request, { params }) {
   try {
-    const { id } = params
+    const { id } = await params
 
     const event = await prisma.event.findUnique({
       where: { id },
@@ -47,7 +47,7 @@ export async function PUT(request, { params }) {
       )
     }
 
-    const { id } = params
+    const { id } = await params
     const event = await prisma.event.findUnique({
       where: { id },
     })
@@ -103,7 +103,7 @@ export async function DELETE(request, { params }) {
       )
     }
 
-    const { id } = params
+    const { id } = await params
     const event = await prisma.event.findUnique({
       where: { id },
     })

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import {
   Tabs,
   TabsContent,
@@ -112,6 +113,36 @@ export default function AdminPortal({ userRole }) {
   const [error, setError] = useState(null);
   const [newComment, setNewComment] = useState("");
 
+  const [actionLoading, setActionLoading] = useState({});
+  const [notice, setNotice] = useState(null); // { type: "success" | "error" | "info", text: string }
+
+  useEffect(() => {
+    if (!notice) return;
+    const t = setTimeout(() => setNotice(null), 4000);
+    return () => clearTimeout(t);
+  }, [notice]);
+
+  const runAction = async (key, fn, { successText, errorText } = {}) => {
+    setActionLoading((p) => ({ ...p, [key]: true }));
+    setError(null);
+    try {
+      const result = await fn();
+      if (successText) setNotice({ type: "success", text: successText });
+      return result;
+    } catch (err) {
+      console.error(err);
+      const message =
+        errorText || (err instanceof Error ? err.message : "Action failed");
+      setNotice({ type: "error", text: message });
+      setError(message);
+      return null;
+    } finally {
+      setActionLoading((p) => ({ ...p, [key]: false }));
+    }
+  };
+
+  const isActionLoading = (key) => !!actionLoading[key];
+
   const visibleTabs =
     userRole === "ADMIN"
       ? ["content", "editors", "events", "members", "youtube", "subscriptions"]
@@ -205,13 +236,20 @@ export default function AdminPortal({ userRole }) {
 
   const deleteSubscription = async (email) => {
     if (!email) return;
-    await fetch("/api/subscriptions", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ email }),
-    });
-    await fetchSubscriptions();
+    await runAction(
+      `subscription:delete:${email}`,
+      async () => {
+        const res = await fetch("/api/subscriptions", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ email }),
+        });
+        if (!res.ok) throw new Error("Failed to unsubscribe");
+        await fetchSubscriptions();
+      },
+      { successText: "Unsubscribed." }
+    );
   };
 
   const fetchSubscriptions = async () => {
@@ -277,43 +315,37 @@ export default function AdminPortal({ userRole }) {
 
   const submitContentUpdate = async () => {
     if (!selectedContent) return;
-    try {
-      setError(null);
-      const res = await fetch(`/api/content/${selectedContent.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(contentDraft),
-      });
-      if (!res.ok) {
-        setError("Failed to update content");
-        return;
-      }
-      await fetchContent();
-    } catch (err) {
-      console.error(err);
-      setError("Failed to update content");
-    }
+    await runAction(
+      `content:update:${selectedContent.id}`,
+      async () => {
+        const res = await fetch(`/api/content/${selectedContent.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(contentDraft),
+        });
+        if (!res.ok) throw new Error("Failed to update content");
+        await fetchContent();
+      },
+      { successText: "Content updated." }
+    );
   };
 
   const deleteContent = async (id) => {
-    try {
-      setError(null);
-      const res = await fetch(`/api/content/${id}`, { method: "DELETE" });
-      if (!res.ok) {
-        setError("Failed to delete content");
-        return;
-      }
-      if (selectedContent?.id === id) {
-        setSelectedContent(null);
-        setContentDraft(null);
-        setContentMedia([]);
-        setContentComments([]);
-      }
-      await fetchContent();
-    } catch (err) {
-      console.error(err);
-      setError("Failed to delete content");
-    }
+    await runAction(
+      `content:delete:${id}`,
+      async () => {
+        const res = await fetch(`/api/content/${id}`, { method: "DELETE" });
+        if (!res.ok) throw new Error("Failed to delete content");
+        if (selectedContent?.id === id) {
+          setSelectedContent(null);
+          setContentDraft(null);
+          setContentMedia([]);
+          setContentComments([]);
+        }
+        await fetchContent();
+      },
+      { successText: "Content deleted." }
+    );
   };
 
   const createContent = async () => {
@@ -401,91 +433,99 @@ export default function AdminPortal({ userRole }) {
   };
 
   const createMedia = async () => {
-    try {
-      setUploadingMedia(true);
-      let url = newMedia.url;
-      let derivedType = newMedia.type;
-      let mimeType = newMedia.mimeType;
+    await runAction(
+      selectedContent?.id ? `media:create:${selectedContent.id}` : "media:create",
+      async () => {
+        setUploadingMedia(true);
+        let url = newMedia.url;
+        let derivedType = newMedia.type;
+        let mimeType = newMedia.mimeType;
 
-      if (newMediaFile) {
-        const formData = new FormData();
-        formData.append("file", newMediaFile);
-        formData.append(
-          "prefix",
-          selectedContent?.id ? `media/${selectedContent.id}` : "media"
-        );
-        const res = await fetch("/api/r2/upload", {
-          method: "POST",
-          body: formData,
-        });
-        if (!res.ok) {
-          const detail = await res.json().catch(() => ({}));
-          throw new Error(detail.error || "Upload failed");
+        if (newMediaFile) {
+          const formData = new FormData();
+          formData.append("file", newMediaFile);
+          formData.append(
+            "prefix",
+            selectedContent?.id ? `media/${selectedContent.id}` : "media"
+          );
+          const res = await fetch("/api/r2/upload", {
+            method: "POST",
+            body: formData,
+          });
+          if (!res.ok) {
+            const detail = await res.json().catch(() => ({}));
+            throw new Error(detail.error || "Upload failed");
+          }
+          const data = await res.json();
+          url = data.url;
+          mimeType = newMediaFile.type || mimeType;
+          derivedType = inferMediaType(newMediaFile.type);
         }
-        const data = await res.json();
-        url = data.url;
-        mimeType = newMediaFile.type || mimeType;
-        derivedType = inferMediaType(newMediaFile.type);
-      }
 
-      if (!url) throw new Error("URL missing");
+        if (!url) throw new Error("URL missing");
 
-      await fetch("/api/media", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...newMedia,
-          url,
-          type: derivedType,
-          mimeType,
-          contentId: selectedContent?.id || null,
-        }),
-      });
-      setNewMedia({ type: "IMAGE", url: "", mimeType: "" });
-      setNewMediaFile(null);
-      if (selectedContent?.id) {
-        await fetchContentMedia(selectedContent.id);
-      } else {
-        await fetchMedia();
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setUploadingMedia(false);
-    }
+        const res = await fetch("/api/media", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...newMedia,
+            url,
+            type: derivedType,
+            mimeType,
+            contentId: selectedContent?.id || null,
+          }),
+        });
+        if (!res.ok) throw new Error("Failed to add media");
+
+        setNewMedia({ type: "IMAGE", url: "", mimeType: "" });
+        setNewMediaFile(null);
+        if (selectedContent?.id) {
+          await fetchContentMedia(selectedContent.id);
+        } else {
+          await fetchMedia();
+        }
+      },
+      { successText: "Media added." }
+    );
+    setUploadingMedia(false);
   };
 
   const deleteMedia = async (id) => {
-    await fetch(`/api/media/${id}`, { method: "DELETE" });
-    if (selectedContent?.id) {
-      await fetchContentMedia(selectedContent.id);
-    } else {
-      await fetchMedia();
-    }
+    await runAction(
+      `media:delete:${id}`,
+      async () => {
+        const res = await fetch(`/api/media/${id}`, { method: "DELETE" });
+        if (!res.ok) throw new Error("Failed to delete media");
+        if (selectedContent?.id) {
+          await fetchContentMedia(selectedContent.id);
+        } else {
+          await fetchMedia();
+        }
+      },
+      { successText: "Media deleted." }
+    );
   };
 
   const createEditor = async () => {
     const email = newEditorEmail.trim().toLowerCase();
     if (!email) return;
-    try {
-      setError(null);
-      const res = await fetch("/api/users", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, role: "EDITOR" }),
-      });
-      if (!res.ok) {
-        const detail = await res.json().catch(() => ({}));
-        setError(detail.error || "Failed to create editor");
-        return;
-      }
-      setError(null);
-      setNewEditorEmail("");
-      await fetchEditors();
-    } catch (err) {
-      console.error(err);
-      setError("Failed to create editor");
-    }
+    await runAction(
+      `editor:create:${email}`,
+      async () => {
+        const res = await fetch("/api/users", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, role: "EDITOR" }),
+        });
+        if (!res.ok) {
+          const detail = await res.json().catch(() => ({}));
+          throw new Error(detail.error || "Failed to create editor");
+        }
+        setNewEditorEmail("");
+        await fetchEditors();
+      },
+      { successText: "Editor created." }
+    );
   };
 
   const addQueuedMediaUrl = () => {
@@ -536,12 +576,19 @@ export default function AdminPortal({ userRole }) {
 
   const deleteComment = async (commentId) => {
     if (!commentId) return;
-    const res = await fetch(`/api/comments/${commentId}`, {
-      method: "DELETE",
-    });
-    if (res.ok && selectedContent?.id) {
-      await fetchContentComments(selectedContent.id);
-    }
+    await runAction(
+      `comment:delete:${commentId}`,
+      async () => {
+        const res = await fetch(`/api/comments/${commentId}`, {
+          method: "DELETE",
+        });
+        if (!res.ok) throw new Error("Failed to delete comment");
+        if (selectedContent?.id) {
+          await fetchContentComments(selectedContent.id);
+        }
+      },
+      { successText: "Comment deleted." }
+    );
   };
 
   const createEvent = async () => {
@@ -567,41 +614,45 @@ export default function AdminPortal({ userRole }) {
       setError("Date must be today or in the future");
       return;
     }
-    try {
-      const res = await fetch("/api/events", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newEvent),
-        credentials: "include",
-      });
-      if (!res.ok) {
-        const detail = await res.json().catch(() => ({}));
-        setError(detail.error || "Failed to create event");
-        return;
-      }
-      setNewEvent({
-        title: "",
-        description: "",
-        date: "",
-        time: "",
-        location: "",
-      });
-      await fetchEvents();
-    } catch (err) {
-      console.error(err);
-      setError("Failed to create event");
-    }
+    await runAction(
+      "event:create",
+      async () => {
+        const res = await fetch("/api/events", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(newEvent),
+          credentials: "include",
+        });
+        if (!res.ok) {
+          const detail = await res.json().catch(() => ({}));
+          throw new Error(detail.error || "Failed to create event");
+        }
+        setNewEvent({
+          title: "",
+          description: "",
+          date: "",
+          time: "",
+          location: "",
+        });
+        await fetchEvents();
+      },
+      { successText: "Event created." }
+    );
   };
 
   const deleteEvent = async (id) => {
-    try {
-      const res = await fetch(`/api/events/${id}`, { method: "DELETE", credentials: "include" });
-      if (!res.ok) throw new Error("Failed to delete");
-      await fetchEvents();
-    } catch (err) {
-      console.error(err);
-      setError("Failed to delete event");
-    }
+    await runAction(
+      `event:delete:${id}`,
+      async () => {
+        const res = await fetch(`/api/events/${id}`, {
+          method: "DELETE",
+          credentials: "include",
+        });
+        if (!res.ok) throw new Error("Failed to delete event");
+        await fetchEvents();
+      },
+      { successText: "Event deleted." }
+    );
   };
 
   const startEditEvent = (ev) => {
@@ -629,90 +680,112 @@ export default function AdminPortal({ userRole }) {
   const saveEditEvent = async () => {
     if (!editingEvent) return;
     const payload = { ...eventDraft };
-    try {
-      const res = await fetch(`/api/events/${editingEvent.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) throw new Error("Failed to update");
-      setEditingEvent(null);
-      await fetchEvents();
-    } catch (err) {
-      console.error(err);
-      setError("Failed to update event");
-    }
+    await runAction(
+      `event:update:${editingEvent.id}`,
+      async () => {
+        const res = await fetch(`/api/events/${editingEvent.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) throw new Error("Failed to update event");
+        setEditingEvent(null);
+        await fetchEvents();
+      },
+      { successText: "Event updated." }
+    );
   };
 
   const createYoutube = async () => {
     if (!newYoutubeUrl.trim()) return;
-    try {
-      const res = await fetch("/api/media", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "YOUTUBE", url: newYoutubeUrl.trim() }),
-        credentials: "include",
-      });
-      if (!res.ok) {
-        const detail = await res.json().catch(() => ({}));
-        setError(detail.error || "Failed to add YouTube link");
-        return;
-      }
-      setNewYoutubeUrl("");
-      await fetchYoutubeMedia();
-    } catch (err) {
-      console.error(err);
-      setError("Failed to add YouTube link");
-    }
+    await runAction(
+      "youtube:create",
+      async () => {
+        const res = await fetch("/api/media", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type: "YOUTUBE", url: newYoutubeUrl.trim() }),
+          credentials: "include",
+        });
+        if (!res.ok) {
+          const detail = await res.json().catch(() => ({}));
+          throw new Error(detail.error || "Failed to add YouTube link");
+        }
+        setNewYoutubeUrl("");
+        await fetchYoutubeMedia();
+      },
+      { successText: "YouTube link added." }
+    );
   };
 
   const deleteYoutube = async (id) => {
-    await fetch(`/api/media/${id}`, {
-      method: "DELETE",
-      credentials: "include",
-    });
-    await fetchYoutubeMedia();
+    await runAction(
+      `youtube:delete:${id}`,
+      async () => {
+        const res = await fetch(`/api/media/${id}`, {
+          method: "DELETE",
+          credentials: "include",
+        });
+        if (!res.ok) throw new Error("Failed to delete YouTube link");
+        await fetchYoutubeMedia();
+      },
+      { successText: "YouTube link deleted." }
+    );
   };
 
   const createMember = async () => {
     if (!newMember.name || !newMember.role) return;
-    try {
-      const res = await fetch("/api/members", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newMember),
-        credentials: "include",
-      });
-      if (!res.ok) {
-        const detail = await res.json().catch(() => ({}));
-        setError(detail.error || "Failed to create member");
-        return;
-      }
-      setNewMember({ name: "", role: "", bio: "", profileImageUrl: "" });
-      await fetchMembers();
-    } catch (err) {
-      console.error(err);
-      setError("Failed to create member");
-    }
+    await runAction(
+      "member:create",
+      async () => {
+        const res = await fetch("/api/members", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(newMember),
+          credentials: "include",
+        });
+        if (!res.ok) {
+          const detail = await res.json().catch(() => ({}));
+          throw new Error(detail.error || "Failed to create member");
+        }
+        setNewMember({ name: "", role: "", bio: "", profileImageUrl: "" });
+        await fetchMembers();
+      },
+      { successText: "Member created." }
+    );
   };
 
   const updateMember = async (id, partial) => {
-    await fetch(`/api/members/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(partial),
-      credentials: "include",
-    });
-    await fetchMembers();
+    await runAction(
+      `member:update:${id}`,
+      async () => {
+        const res = await fetch(`/api/members/${id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(partial),
+          credentials: "include",
+        });
+        if (!res.ok) throw new Error("Failed to update member");
+        await fetchMembers();
+      },
+      { successText: "Member updated." }
+    );
   };
 
   const deleteMember = async (id) => {
-    await fetch(`/api/members/${id}`, {
-      method: "DELETE",
-      credentials: "include",
-    });
-    await fetchMembers();
+    await runAction(
+      `member:delete:${id}`,
+      async () => {
+        const res = await fetch(`/api/members/${id}`, {
+          method: "DELETE",
+          credentials: "include",
+        });
+        if (!res.ok) throw new Error("Failed to delete member");
+        await fetchMembers();
+      },
+      { successText: "Member deleted." }
+    );
   };
 
   return (
@@ -728,6 +801,30 @@ export default function AdminPortal({ userRole }) {
           Role: {userRole}
         </div>
       </div>
+
+      {notice && (
+        <div
+          className={[
+            "mb-4 rounded-md border px-3 py-2 text-sm",
+            notice.type === "success"
+              ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+              : notice.type === "error"
+                ? "border-red-500/50 bg-red-500/10 text-red-600 dark:text-red-400"
+                : "border-border-primary/60 bg-background-secondary text-foreground/90",
+          ].join(" ")}
+        >
+          <div className="flex items-start justify-between gap-3">
+            <span>{notice.text}</span>
+            <button
+              type="button"
+              className="text-xs font-semibold opacity-70 hover:opacity-100"
+              onClick={() => setNotice(null)}
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="no-scrollbar mb-4 flex w-full overflow-x-auto bg-background-secondary">
@@ -828,8 +925,14 @@ export default function AdminPortal({ userRole }) {
                           size="xs"
                           variant="destructive"
                           onClick={() => deleteContent(c.id)}
+                          disabled={isActionLoading(`content:delete:${c.id}`)}
                         >
-                          Delete
+                          {isActionLoading(`content:delete:${c.id}`) && (
+                            <Spinner className="h-3.5 w-3.5" />
+                          )}
+                          {isActionLoading(`content:delete:${c.id}`)
+                            ? "Deleting..."
+                            : "Delete"}
                         </Button>
                       </div>
                     </div>
@@ -1068,12 +1171,34 @@ export default function AdminPortal({ userRole }) {
                 />
               </div>
               <div className="mt-4 flex flex-wrap gap-2">
-                <Button onClick={submitContentUpdate}>Submit changes</Button>
+                <Button
+                  onClick={submitContentUpdate}
+                  disabled={
+                    selectedContent?.id
+                      ? isActionLoading(`content:update:${selectedContent.id}`)
+                      : false
+                  }
+                >
+                  {selectedContent?.id &&
+                    isActionLoading(`content:update:${selectedContent.id}`) && (
+                      <Spinner />
+                    )}
+                  {selectedContent?.id &&
+                  isActionLoading(`content:update:${selectedContent.id}`)
+                    ? "Saving..."
+                    : "Submit changes"}
+                </Button>
                 <Button
                   variant="destructive"
                   onClick={() => deleteContent(selectedContent.id)}
+                  disabled={isActionLoading(`content:delete:${selectedContent.id}`)}
                 >
-                  Delete
+                  {isActionLoading(`content:delete:${selectedContent.id}`) && (
+                    <Spinner />
+                  )}
+                  {isActionLoading(`content:delete:${selectedContent.id}`)
+                    ? "Deleting..."
+                    : "Delete"}
                 </Button>
                 <Button
                   variant="ghost"
@@ -1116,8 +1241,14 @@ export default function AdminPortal({ userRole }) {
                           size="xs"
                           variant="destructive"
                           onClick={() => deleteMedia(m.id)}
+                        disabled={isActionLoading(`media:delete:${m.id}`)}
                         >
-                          Delete
+                        {isActionLoading(`media:delete:${m.id}`) && (
+                          <Spinner className="h-3.5 w-3.5" />
+                        )}
+                        {isActionLoading(`media:delete:${m.id}`)
+                          ? "Deleting..."
+                          : "Delete"}
                         </Button>
                       </div>
                     ))}
@@ -1179,6 +1310,7 @@ export default function AdminPortal({ userRole }) {
                           onClick={createMedia}
                           disabled={uploadingMedia}
                         >
+                          {uploadingMedia && <Spinner />}
                           {uploadingMedia ? "Uploading..." : "Add media"}
                         </Button>
                       </div>
@@ -1212,8 +1344,14 @@ export default function AdminPortal({ userRole }) {
                             size="xs"
                             variant="destructive"
                             onClick={() => deleteComment(c.id)}
+                            disabled={isActionLoading(`comment:delete:${c.id}`)}
                           >
-                            Delete
+                            {isActionLoading(`comment:delete:${c.id}`) && (
+                              <Spinner className="h-3.5 w-3.5" />
+                            )}
+                            {isActionLoading(`comment:delete:${c.id}`)
+                              ? "Deleting..."
+                              : "Delete"}
                           </Button>
                         </div>
                       </div>
@@ -1291,8 +1429,23 @@ export default function AdminPortal({ userRole }) {
                         <Button size="xs" variant="secondary" onClick={cancelEditEvent}>
                           Cancel
                         </Button>
-                        <Button size="xs" onClick={saveEditEvent}>
-                          Save
+                        <Button
+                          size="xs"
+                          onClick={saveEditEvent}
+                          disabled={
+                            editingEvent?.id
+                              ? isActionLoading(`event:update:${editingEvent.id}`)
+                              : false
+                          }
+                        >
+                          {editingEvent?.id &&
+                            isActionLoading(`event:update:${editingEvent.id}`) && (
+                              <Spinner className="h-3.5 w-3.5" />
+                            )}
+                          {editingEvent?.id &&
+                          isActionLoading(`event:update:${editingEvent.id}`)
+                            ? "Saving..."
+                            : "Save"}
                         </Button>
                       </div>
                     </div>
@@ -1310,8 +1463,14 @@ export default function AdminPortal({ userRole }) {
                           size="xs"
                           variant="destructive"
                           onClick={() => deleteEvent(ev.id)}
+                          disabled={isActionLoading(`event:delete:${ev.id}`)}
                         >
-                          Delete
+                          {isActionLoading(`event:delete:${ev.id}`) && (
+                            <Spinner className="h-3.5 w-3.5" />
+                          )}
+                          {isActionLoading(`event:delete:${ev.id}`)
+                            ? "Deleting..."
+                            : "Delete"}
                         </Button>
                       </div>
                     </>
@@ -1372,8 +1531,13 @@ export default function AdminPortal({ userRole }) {
               />
             </div>
             <div className="mt-3 flex justify-end">
-              <Button size="sm" onClick={createEvent}>
-                Add event
+              <Button
+                size="sm"
+                onClick={createEvent}
+                disabled={isActionLoading("event:create")}
+              >
+                {isActionLoading("event:create") && <Spinner />}
+                {isActionLoading("event:create") ? "Adding..." : "Add event"}
               </Button>
             </div>
           </div>
@@ -1426,7 +1590,16 @@ export default function AdminPortal({ userRole }) {
                     className="w-full rounded-md border border-border-primary bg-background-primary px-3 py-2 text-sm"
                   />
                   <Button size="sm" onClick={createEditor}>
-                    Make editor
+                    {newEditorEmail?.trim() &&
+                      isActionLoading(
+                        `editor:create:${newEditorEmail.trim().toLowerCase()}`
+                      ) && <Spinner />}
+                    {newEditorEmail?.trim() &&
+                    isActionLoading(
+                      `editor:create:${newEditorEmail.trim().toLowerCase()}`
+                    )
+                      ? "Saving..."
+                      : "Make editor"}
                   </Button>
                 </div>
               </div>
@@ -1482,15 +1655,27 @@ export default function AdminPortal({ userRole }) {
                               m.profileImageUrl,
                           })
                         }
+                        disabled={isActionLoading(`member:update:${m.id}`)}
                       >
-                        Edit
+                        {isActionLoading(`member:update:${m.id}`) && (
+                          <Spinner className="h-3.5 w-3.5" />
+                        )}
+                        {isActionLoading(`member:update:${m.id}`)
+                          ? "Saving..."
+                          : "Edit"}
                       </Button>
                       <Button
                         size="xs"
                         variant="destructive"
                         onClick={() => deleteMember(m.id)}
+                        disabled={isActionLoading(`member:delete:${m.id}`)}
                       >
-                        Delete
+                        {isActionLoading(`member:delete:${m.id}`) && (
+                          <Spinner className="h-3.5 w-3.5" />
+                        )}
+                        {isActionLoading(`member:delete:${m.id}`)
+                          ? "Deleting..."
+                          : "Delete"}
                       </Button>
                     </div>
                   </div>
@@ -1527,8 +1712,13 @@ export default function AdminPortal({ userRole }) {
                   />
                 </div>
                 <div className="mt-3 flex justify-end">
-                  <Button size="sm" onClick={createMember}>
-                    Add member
+                  <Button
+                    size="sm"
+                    onClick={createMember}
+                    disabled={isActionLoading("member:create")}
+                  >
+                    {isActionLoading("member:create") && <Spinner />}
+                    {isActionLoading("member:create") ? "Adding..." : "Add member"}
                   </Button>
                 </div>
               </div>
@@ -1560,8 +1750,14 @@ export default function AdminPortal({ userRole }) {
                         size="xs"
                         variant="destructive"
                         onClick={() => deleteYoutube(m.id)}
+                        disabled={isActionLoading(`youtube:delete:${m.id}`)}
                       >
-                        Delete
+                        {isActionLoading(`youtube:delete:${m.id}`) && (
+                          <Spinner className="h-3.5 w-3.5" />
+                        )}
+                        {isActionLoading(`youtube:delete:${m.id}`)
+                          ? "Deleting..."
+                          : "Delete"}
                       </Button>
                     </div>
                   </div>
@@ -1583,7 +1779,8 @@ export default function AdminPortal({ userRole }) {
                     className="w-full rounded-md border border-border-primary bg-background-primary px-3 py-2 text-sm"
                   />
                   <Button size="sm" onClick={createYoutube}>
-                    Add
+                    {isActionLoading("youtube:create") && <Spinner />}
+                    {isActionLoading("youtube:create") ? "Adding..." : "Add"}
                   </Button>
                 </div>
                 <p className="mt-2 text-xs text-muted-foreground">
@@ -1624,8 +1821,14 @@ export default function AdminPortal({ userRole }) {
                         size="xs"
                         variant="destructive"
                         onClick={() => deleteSubscription(s.email)}
+                        disabled={isActionLoading(`subscription:delete:${s.email}`)}
                       >
-                        Unsubscribe
+                        {isActionLoading(`subscription:delete:${s.email}`) && (
+                          <Spinner className="h-3.5 w-3.5" />
+                        )}
+                        {isActionLoading(`subscription:delete:${s.email}`)
+                          ? "Working..."
+                          : "Unsubscribe"}
                       </Button>
                     </div>
                   ))}
