@@ -20,61 +20,72 @@ async function fetchEvents(limit = 3) {
 export default async function EventsSection() {
   const events = await fetchEvents(3);
   return (
-    <section className="relative overflow-hidden border-b border-border-primary bg-gradient-to-r from-background-secondary via-background-primary to-background-secondary px-[5%] py-6 md:py-8">
-      <div className="absolute inset-0 opacity-20">
-        <div className="absolute -left-10 top-0 h-24 w-24 rounded-full bg-primary blur-[60px]" />
-        <div className="absolute right-10 bottom-0 h-28 w-28 rounded-full bg-blue-500 blur-[70px]" />
-      </div>
-      <div className="container relative z-10 max-w-5xl">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-              Upcoming events
+    <section className="border-b border-border-primary bg-background-secondary/50 px-[5%] py-3 md:py-4">
+      <div className="mx-auto w-full max-w-3xl">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+          <div className="min-w-0">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+              Upcoming
             </p>
-            <h2 className="text-xl font-bold md:text-2xl">
-              What’s happening soon
+            <h2 className="text-lg font-bold leading-tight tracking-tight text-text-primary md:text-xl">
+              Events
             </h2>
-            <p className="text-xs text-muted-foreground">
-              Quick highlights from CAP’s calendar.
-            </p>
           </div>
           <a
             href="/events"
-            className="inline-flex items-center gap-2 rounded-full border border-border-primary bg-background-primary px-4 py-2 text-xs font-semibold text-primary shadow-sm hover:bg-background-secondary"
+            className="inline-flex shrink-0 items-center justify-center self-start rounded-full border border-border-primary bg-background-primary px-3 py-1.5 text-xs font-semibold text-primary shadow-sm transition hover:bg-background-secondary sm:self-auto"
           >
             View all events
-            <span aria-hidden>→</span>
+            <span className="ml-1" aria-hidden>
+              →
+            </span>
           </a>
         </div>
-        <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
-          {events.map((ev) => (
-            <div
-              key={ev.id}
-              className="group rounded-xl border border-border-primary/50 bg-background-primary/90 p-3 shadow-sm transition hover:shadow-md"
-            >
-              <div className="flex items-center justify-between text-[11px] font-semibold uppercase text-muted-foreground">
-                <span>{new Date(ev.date).toLocaleDateString()}</span>
-                <span>{ev.time}</span>
-              </div>
-              <h3 className="mt-1 text-sm font-bold line-clamp-2">
-                {ev.title}
-              </h3>
-              <p className="text-[12px] text-muted-foreground line-clamp-2">
-                {ev.description}
-              </p>
-              {ev.location && (
-                <p className="mt-2 text-[11px] font-semibold text-primary">
-                  {ev.location}
-                </p>
-              )}
-            </div>
-          ))}
-          {events.length === 0 && (
-            <p className="text-sm text-muted-foreground">No upcoming events.</p>
-          )}
-        </div>
+
+        {events.length > 0 ? (
+          <ul className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-[repeat(auto-fit,minmax(min(100%,240px),1fr))] md:mt-3 md:gap-3">
+            {events.map((ev) => (
+              <li key={ev.id} className="min-w-0">
+                <a
+                  href="/events"
+                  className="block rounded-lg border border-border-primary bg-background-primary p-3 shadow-sm ring-1 ring-border-primary/25 transition hover:border-primary/35 hover:shadow"
+                >
+                  <div className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
+                    <time
+                      className="font-medium tabular-nums text-text-primary"
+                      dateTime={ev.date}
+                    >
+                      {new Date(ev.date).toLocaleDateString(undefined, {
+                        weekday: "short",
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </time>
+                    <span className="shrink-0 tabular-nums">{ev.time}</span>
+                  </div>
+                  <p className="mt-1.5 line-clamp-2 text-sm font-semibold leading-snug text-text-primary">
+                    {ev.title}
+                  </p>
+                  {ev.description ? (
+                    <p className="mt-1 line-clamp-2 text-[11px] leading-snug text-muted-foreground">
+                      {ev.description}
+                    </p>
+                  ) : null}
+                  {ev.location ? (
+                    <p className="mt-2 text-[11px] font-medium leading-tight text-primary">
+                      {ev.location}
+                    </p>
+                  ) : null}
+                </a>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-3 rounded-md border border-dashed border-border-primary bg-background-primary/50 px-3 py-3 text-center text-xs text-muted-foreground">
+            No upcoming events right now.
+          </p>
+        )}
       </div>
     </section>
   );
 }
-

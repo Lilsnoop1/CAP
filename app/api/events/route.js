@@ -54,6 +54,7 @@ export async function POST(request) {
   try {
     const user = await getCurrentUser()
     if (!user) {
+      console.warn('Create event rejected: unauthenticated request')
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -61,16 +62,25 @@ export async function POST(request) {
     }
 
     if (!isEditorOrAdmin(user)) {
+      console.warn(`Create event rejected: insufficient role (${user.role}) for ${user.email}`)
       return NextResponse.json(
         { error: 'Forbidden: Only editors and admins can create events' },
         { status: 403 }
       )
     }
 
+    console.info(`Create event attempt by ${user.email} (${user.role})`)
+
     const body = await request.json()
     const { title, description, imageUrl, date, time, location } = body
 
     if (!title || !description || !date || !time) {
+      console.warn('Create event rejected: missing required fields', {
+        hasTitle: !!title,
+        hasDescription: !!description,
+        hasDate: !!date,
+        hasTime: !!time,
+      })
       return NextResponse.json(
         { error: 'Missing required fields: title, description, date, time' },
         { status: 400 }
@@ -80,6 +90,7 @@ export async function POST(request) {
     // Validate date/time
     const parsedDate = new Date(date)
     if (Number.isNaN(parsedDate.getTime())) {
+      console.warn('Create event rejected: invalid date format', { date })
       return NextResponse.json(
         { error: 'Invalid date format' },
         { status: 400 }
@@ -99,6 +110,7 @@ export async function POST(request) {
       today.getDate()
     )
     if (dateOnly < todayOnly) {
+      console.warn('Create event rejected: date is in the past', { date })
       return NextResponse.json(
         { error: 'Date must be today or in the future' },
         { status: 400 }
@@ -106,6 +118,7 @@ export async function POST(request) {
     }
 
     if (location !== undefined && typeof location !== 'string') {
+      console.warn('Create event rejected: location is not a string')
       return NextResponse.json(
         { error: 'Location must be a string' },
         { status: 400 }

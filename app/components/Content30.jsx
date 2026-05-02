@@ -1,131 +1,162 @@
 "use client";
 
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-import React, { Fragment } from "react";
+import React from "react";
 import { RxPencil1 } from "react-icons/rx";
-import {
-  BiLinkAlt,
-  BiLogoFacebookCircle,
-  BiLogoLinkedinSquare,
-} from "react-icons/bi";
-import { FaXTwitter } from "react-icons/fa6";
+import ArticleSafeImage, {
+  ARTICLE_AVATAR_FALLBACK,
+  ARTICLE_IMAGE_FALLBACK,
+} from "./ArticleSafeImage.jsx";
 
 export default function Content30({
   body,
-  authorName = "James Mitchell",
-  authorTitle = "Researcher, CAP",
+  authorName = "CAP Contributor",
+  authorEmail = "",
   contentImage,
   tags = [],
-  authorAvatar,
   canEdit = false,
   onEditBody,
   onEditContentImage,
+  onEditAuthorName,
+  onEditAuthorEmail,
 }) {
   const paragraphs =
     body && typeof body === "string"
       ? body.split(/\n{2,}/).filter(Boolean)
       : [];
 
+  const tagList =
+    tags?.length > 0
+      ? tags
+      : [];
+
   return (
-    <section id="relume" className="px-[5%] py-16 md:py-24 lg:py-28">
-      <div className="container">
-        <div className="mx-auto max-w-lg">
-          <div className="mb-8 flex flex-col gap-y-6 sm:flex-row sm:items-center sm:justify-between md:mb-12 md:gap-y-0">
-            <Breadcrumb className="flex items-center">
-              <BreadcrumbList>
-                <BreadcrumbItem>
-                  <BreadcrumbLink href="#">Articles</BreadcrumbLink>
-                </BreadcrumbItem>
-                <BreadcrumbSeparator />
-                <BreadcrumbItem>
-                  <BreadcrumbLink href="#">Ideas</BreadcrumbLink>
-                </BreadcrumbItem>
-              </BreadcrumbList>
-            </Breadcrumb>
-          </div>
-          <div className="prose mb-12 md:prose-md lg:prose-lg md:mb-16 lg:mb-20 relative">
-            {canEdit && (
+    <section
+      id="article-body"
+      className="bg-background-primary px-[5%] py-14 md:py-20 lg:py-24"
+    >
+      <div className="container mx-auto">
+        <div className="mx-auto max-w-3xl">
+          <div className="relative mb-10 md:mb-14">
+            {canEdit && onEditBody && (
               <button
                 type="button"
                 onClick={onEditBody}
-                className="absolute -top-10 right-0 rounded-full border border-border-primary bg-background-primary p-2 text-xs hover:bg-background-secondary"
-                title="Edit content"
+                className="absolute -top-1 right-0 rounded-full border border-border-primary bg-background-primary p-2 text-muted-foreground shadow-sm transition hover:bg-background-secondary hover:text-text-primary"
+                title="Edit article body"
               >
                 <RxPencil1 className="size-4" />
               </button>
             )}
-            <Fragment>
-              {paragraphs.length ? (
+            <div className="prose prose-neutral max-w-none prose-p:leading-relaxed prose-p:my-5 first:prose-p:mt-0 md:prose-lg [&_p]:text-[var(--text-primary)]">
+              {paragraphs.length > 0 ? (
                 paragraphs.map((p, idx) => <p key={idx}>{p}</p>)
               ) : (
-                <>
-                  <h3>Introduction</h3>
-                  <p>
-                    Mi tincidunt elit, id quisque ligula ac diam, amet. Vel etiam
-                    suspendisse morbi eleifend faucibus eget vestibulum felis.
-                    Dictum quis montes, sit sit. Tellus aliquam enim urna, etiam.
-                    Mauris posuere vulputate arcu amet, vitae nisi, tellus
-                    tincidunt. At feugiat sapien varius id.
-                  </p>
-                </>
+                <p className="text-muted-foreground italic">
+                  {canEdit
+                    ? "No article body yet. Use the edit control to add content."
+                    : "No content available."}
+                </p>
               )}
-              <figure className="relative">
-                <img
-                  src={
-                    contentImage ||
-                    "https://d22po4pjz3o32e.cloudfront.net/placeholder-image-landscape.svg"
-                  }
-                  alt="Content illustration"
-                />
-                <figcaption>Image caption goes here</figcaption>
-                {canEdit && (
-                  <button
-                    type="button"
-                    onClick={onEditContentImage}
-                    className="absolute right-2 top-2 rounded-full border border-border-primary bg-background-primary p-2 text-xs hover:bg-background-secondary"
-                    title="Edit content image"
-                  >
-                    <RxPencil1 className="size-4" />
-                  </button>
-                )}
-              </figure>
-            </Fragment>
+            </div>
           </div>
-          <div>
-            <ul className="flex flex-wrap justify-center gap-2">
-              {(tags?.length
-                ? tags
-                : ["Echo chambers", "Discourse", "Perspectives", "Critical thinking"]
-              ).map((tag) => (
-                <li className="flex" key={tag}>
-                  <span className="bg-background-secondary px-2 py-1 text-sm font-semibold">
-                    {tag}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div className="my-8 h-px bg-border-primary md:my-10 lg:my-12" />
-          <div className="flex flex-col items-center gap-4 text-center">
-            <div>
-              <img
-                src={
-                  authorAvatar ||
-                  "https://cdn.prod.website-files.com/624380709031623bfe4aee60/6243807090316203124aee66_placeholder-image.svg"
-                }
-                alt="Logo"
-                className="size-14 rounded-full object-cover"
+
+          <figure className="relative my-12 md:my-16">
+            <div className="overflow-hidden rounded-2xl border border-border-primary bg-background-secondary ring-1 ring-border-primary/60">
+              <ArticleSafeImage
+                src={contentImage}
+                alt=""
+                fallback={ARTICLE_IMAGE_FALLBACK}
+                className="aspect-[16/10] w-full object-cover"
               />
             </div>
-            <div className="grow">
-              <p className="font-semibold md:text-md">{authorName}</p>
-              <p>{authorTitle}</p>
+            {canEdit && onEditContentImage && (
+              <button
+                type="button"
+                onClick={onEditContentImage}
+                className="absolute right-3 top-3 rounded-full border border-border-primary bg-background-primary p-2 text-muted-foreground shadow-sm transition hover:bg-background-secondary"
+                title="Edit inline image URL"
+              >
+                <RxPencil1 className="size-4" />
+              </button>
+            )}
+          </figure>
+
+          {tagList.length > 0 && (
+            <div className="mb-14 md:mb-16">
+              <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Tags
+              </p>
+              <ul className="flex flex-wrap gap-2">
+                {tagList.map((tag) => (
+                  <li key={tag}>
+                    <span className="inline-block rounded-full border border-border-primary bg-background-secondary px-3 py-1 text-sm font-medium text-text-primary">
+                      {tag}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <div className="mx-auto mt-14 max-w-xl text-center md:mt-20">
+            <div className="rounded-2xl border border-border-primary bg-background-secondary/80 px-6 py-8 md:px-10 md:py-10">
+              <div className="mx-auto mb-6 flex justify-center">
+                <div className="size-16 overflow-hidden rounded-full border-2 border-border-primary bg-background-primary ring-2 ring-background-primary">
+                  <ArticleSafeImage
+                    src={null}
+                    alt=""
+                    fallback={ARTICLE_AVATAR_FALLBACK}
+                    className="size-full object-cover"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                  <p className="text-lg font-semibold tracking-tight text-text-primary md:text-xl">
+                    {authorName}
+                  </p>
+                  {canEdit && onEditAuthorName && (
+                    <button
+                      type="button"
+                      onClick={onEditAuthorName}
+                      className="shrink-0 rounded-full border border-border-primary bg-background-primary p-1.5 text-muted-foreground transition hover:bg-background-primary hover:text-text-primary"
+                      title="Edit author name"
+                    >
+                      <RxPencil1 className="size-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {authorEmail ? (
+                  <div className="flex flex-wrap items-center justify-center gap-2">
+                    <p className="max-w-full break-all text-sm text-muted-foreground md:text-base">
+                      {authorEmail}
+                    </p>
+                    {canEdit && onEditAuthorEmail && (
+                      <button
+                        type="button"
+                        onClick={onEditAuthorEmail}
+                        className="shrink-0 rounded-full border border-border-primary bg-background-primary p-1.5 text-muted-foreground transition hover:text-text-primary"
+                        title="Edit author email"
+                      >
+                        <RxPencil1 className="size-3.5" />
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  canEdit &&
+                  onEditAuthorEmail && (
+                    <button
+                      type="button"
+                      onClick={onEditAuthorEmail}
+                      className="text-sm text-muted-foreground underline-offset-4 hover:underline"
+                    >
+                      Add author email
+                    </button>
+                  )
+                )}
+              </div>
             </div>
           </div>
         </div>

@@ -95,7 +95,7 @@ export default function Footer() {
   };
 
   return (
-    <footer id="relume" className="px-[5%] py-12 md:py-18 lg:py-20">
+    <footer id="site-footer" className="px-[5%] py-12 md:py-18 lg:py-20">
       <div className="container">
         <div className="grid grid-cols-1 gap-x-[8vw] gap-y-12 pb-12 md:gap-y-16 md:pb-18 lg:grid-cols-[0.75fr_1fr] lg:gap-y-4 lg:pb-20">
           <div className="flex flex-col">
@@ -154,10 +154,6 @@ export default function Footer() {
                   </Button>
                 </div>
               )}
-              <p className="text-xs">
-                By subscribing you agree to with our Privacy Policy and provide
-                consent to receive updates from our company.
-              </p>
             </div>
           </div>
           <div className="grid grid-cols-1 items-start gap-y-10 sm:grid-cols-2 sm:gap-x-6 md:gap-x-8 md:gap-y-4">
@@ -210,21 +206,6 @@ export default function Footer() {
               </ul>
             </div>
           </div>
-        </div>
-        <div className="h-px w-full bg-black" />
-        <div className="flex flex-col-reverse items-start justify-between pb-4 pt-6 text-sm md:flex-row md:items-center md:pb-0 md:pt-8">
-          <p className="mt-6 md:mt-0">© 2024 Relume. All rights reserved.</p>
-          <ul className="grid grid-flow-row grid-cols-[max-content] justify-center gap-y-4 text-sm md:grid-flow-col md:gap-x-6 md:gap-y-0">
-            <li className="underline">
-              <a href="#">Privacy Policy</a>
-            </li>
-            <li className="underline">
-              <a href="#">Terms of Service</a>
-            </li>
-            <li className="underline">
-              <a href="#">Cookies Settings</a>
-            </li>
-          </ul>
         </div>
         {showToast && (
           <div className="fixed bottom-6 right-6 z-50 rounded-xl bg-black text-white px-4 py-3 shadow-lg flex items-center gap-3">

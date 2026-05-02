@@ -5,7 +5,7 @@ import Providers from "./providers.jsx";
 import PageTransition from "./components/PageTransition.jsx";
 export const metadata = {
   title: "Center of Alternative Perspectives",
-  description: "CAP website migrated to Next.js 15 with Tailwind and Relume UI.",
+  description: "Center for Alternative Perspectives — ideas, publication, and community.",
   icons: {
     icon: "/cap-logo.jpg",
     shortcut: "/cap-logo.jpg",

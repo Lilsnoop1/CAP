@@ -94,7 +94,8 @@ export async function PUT(request, { params }) {
     }
 
     const payload = await request.json()
-    const { type, title, slug, body, status, publishedAt } = payload
+    const { type, title, slug, body, status, publishedAt, authorName, authorEmail } =
+      payload
 
     // Check if slug is being changed and if it already exists
     if (slug && slug !== content.slug) {
@@ -120,20 +121,88 @@ export async function PUT(request, { params }) {
       updateData.publishedAt = publishedAt ? new Date(publishedAt) : null
     }
 
-    const updatedContent = await prisma.content.update({
-      where: { id },
-      data: updateData,
-      include: {
-        author: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
+    const hasAuthorFields =
+      authorName !== undefined || authorEmail !== undefined
+    const hasContentFields = Object.keys(updateData).length > 0
+
+    if (!hasContentFields && !hasAuthorFields) {
+      return NextResponse.json({ error: 'No fields to update' }, { status: 400 })
+    }
+
+    const includeAuthorMedia = {
+      author: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
         },
-        media: true,
       },
-    })
+      media: true,
+    }
+
+    if (hasAuthorFields) {
+      if (!content.authorId) {
+        return NextResponse.json(
+          { error: 'Content has no author to update' },
+          { status: 400 }
+        )
+      }
+      const authorUpdate = {}
+      if (typeof authorName === 'string') {
+        const n = authorName.trim()
+        if (!n) {
+          return NextResponse.json(
+            { error: 'Author name cannot be empty' },
+            { status: 400 }
+          )
+        }
+        authorUpdate.name = n
+      }
+      if (typeof authorEmail === 'string') {
+        const nextEmail = authorEmail.trim().toLowerCase()
+        if (!nextEmail) {
+          return NextResponse.json(
+            { error: 'Author email cannot be empty' },
+            { status: 400 }
+          )
+        }
+        authorUpdate.email = nextEmail
+      }
+      if (Object.keys(authorUpdate).length === 0) {
+        return NextResponse.json(
+          { error: 'No author fields to update' },
+          { status: 400 }
+        )
+      }
+      try {
+        await prisma.user.update({
+          where: { id: content.authorId },
+          data: authorUpdate,
+        })
+      } catch (err) {
+        if (err?.code === 'P2002') {
+          return NextResponse.json(
+            { error: 'That email is already in use' },
+            { status: 409 }
+          )
+        }
+        throw err
+      }
+    }
+
+    let updatedContent
+    if (hasContentFields) {
+      updatedContent = await prisma.content.update({
+        where: { id },
+        data: updateData,
+        include: includeAuthorMedia,
+      })
+    } else {
+      updatedContent = await prisma.content.findUnique({
+        where: { id },
+        include: includeAuthorMedia,
+      })
+    }
 
     return NextResponse.json(updatedContent)
   } catch (error) {

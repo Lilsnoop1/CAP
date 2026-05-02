@@ -79,3 +79,8 @@ a {
 .animate-page-fade {
   animation: pageFade 280ms ease-out;
 }
+
+/* Google Places Autocomplete suggestions — above Radix overlays (z-50) and stacking contexts */
+.pac-container {
+  z-index: 100002 !important;
+}

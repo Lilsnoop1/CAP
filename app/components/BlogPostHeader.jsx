@@ -15,88 +15,101 @@ import {
   BiLogoLinkedinSquare,
 } from "react-icons/bi";
 import { FaXTwitter } from "react-icons/fa6";
+import ArticleSafeImage, {
+  ARTICLE_IMAGE_FALLBACK,
+} from "./ArticleSafeImage.jsx";
 
 export default function BlogPostHeader({
-  title = "The world doesn't need another echo chamber",
-  authorName = "James Mitchell",
+  title = "Article",
+  authorName = "CAP Contributor",
   publishedAt,
-  heroImage = "https://d22po4pjz3o32e.cloudfront.net/placeholder-image.svg",
+  heroImage,
   canEdit = false,
   onEditTitle,
   onEditHero,
 }) {
   const dateLabel = publishedAt
-    ? new Date(publishedAt).toLocaleDateString()
-    : "15 Mar 2024";
+    ? new Date(publishedAt).toLocaleDateString(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      })
+    : null;
 
   return (
-    <section id="relume" className="px-[5%] py-16 md:py-24 lg:py-28">
-      <div className="container">
-        <div className="grid gap-x-20 gap-y-12 md:grid-cols-[.75fr_1fr]">
-          <div className="mx-auto flex size-full max-w-lg flex-col items-start justify-start">
-            <Breadcrumb className="mb-6 flex w-full items-center md:mb-8">
+    <section id="article-hero" className="bg-background-primary px-[5%] pb-12 pt-12 md:pb-16 md:pt-16 lg:pb-20 lg:pt-20">
+      <div className="container mx-auto">
+        <div className="grid gap-x-16 gap-y-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:items-start lg:gap-x-20">
+          <div className="flex max-w-xl flex-col lg:max-w-none">
+            <Breadcrumb className="mb-8 flex w-full items-center md:mb-10">
               <BreadcrumbList>
                 <BreadcrumbItem>
-                  <BreadcrumbLink href="#">Articles</BreadcrumbLink>
+                  <BreadcrumbLink href="/publication">Publication</BreadcrumbLink>
                 </BreadcrumbItem>
                 <BreadcrumbSeparator />
                 <BreadcrumbItem>
-                  <BreadcrumbLink href="#">Ideas</BreadcrumbLink>
+                  <BreadcrumbLink href="/trending-articles">Articles</BreadcrumbLink>
                 </BreadcrumbItem>
               </BreadcrumbList>
             </Breadcrumb>
-            <div className="mb-8 flex items-center gap-3 md:mb-10 lg:mb-12">
-              <h1 className="text-5xl font-bold md:text-7xl lg:text-8xl">
+
+            <div className="mb-8 flex flex-wrap items-start gap-x-3 gap-y-2 md:mb-10">
+              <h1 className="min-w-0 flex-1 text-4xl font-bold leading-[1.08] tracking-tight md:text-5xl lg:text-6xl">
                 {title}
               </h1>
-              {canEdit && (
+              {canEdit && onEditTitle && (
                 <button
                   type="button"
                   onClick={onEditTitle}
-                  className="rounded-full border border-border-primary bg-background-primary p-2 text-xs hover:bg-background-secondary"
+                  className="mt-1 shrink-0 rounded-full border border-border-primary bg-background-secondary p-2 text-muted-foreground transition hover:bg-background-primary hover:text-text-primary"
                   title="Edit title"
                 >
                   <RxPencil1 className="size-4" />
                 </button>
               )}
             </div>
-            <div className="flex size-full flex-col items-start justify-start">
-              <div className="rb-4 mb-6 flex items-center md:mb-8">
-                <div>
-                  <h6 className="font-semibold">
-                    <span className="font-normal">By</span> {authorName}
-                  </h6>
-                  <div className="mt-1 flex">
-                    <p className="text-sm">{dateLabel}</p>
-                    <span className="mx-2">•</span>
-                    <p className="text-sm">7 min read</p>
-                  </div>
-                </div>
-              </div>
+
+            <div className="flex flex-col gap-8">
               <div>
-                <p className="text-base font-semibold">Share this article</p>
-                <div className="rt-4 mt-3 grid grid-flow-col grid-cols-[max-content] items-start gap-2 md:mt-4">
+                <p className="text-base font-semibold text-text-primary md:text-lg">
+                  <span className="font-normal text-muted-foreground">By </span>
+                  {authorName}
+                </p>
+                {dateLabel && (
+                  <p className="mt-2 text-sm text-muted-foreground">{dateLabel}</p>
+                )}
+              </div>
+
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                  Share
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
                   <a
                     href="#"
-                    className="rounded-[1.25rem] bg-background-secondary p-1"
+                    className="rounded-[1.25rem] bg-background-secondary p-1.5 transition hover:opacity-90"
+                    aria-label="Copy link"
                   >
                     <BiLinkAlt className="size-6" />
                   </a>
                   <a
                     href="#"
-                    className="rounded-[1.25rem] bg-background-secondary p-1"
+                    className="rounded-[1.25rem] bg-background-secondary p-1.5 transition hover:opacity-90"
+                    aria-label="Share on LinkedIn"
                   >
                     <BiLogoLinkedinSquare className="size-6" />
                   </a>
                   <a
                     href="#"
-                    className="rounded-[1.25rem] bg-background-secondary p-1"
+                    className="rounded-[1.25rem] bg-background-secondary p-1.5 transition hover:opacity-90"
+                    aria-label="Share on X"
                   >
                     <FaXTwitter className="size-6 p-0.5" />
                   </a>
                   <a
                     href="#"
-                    className="rounded-[1.25rem] bg-background-secondary p-1"
+                    className="rounded-[1.25rem] bg-background-secondary p-1.5 transition hover:opacity-90"
+                    aria-label="Share on Facebook"
                   >
                     <BiLogoFacebookCircle className="size-6" />
                   </a>
@@ -104,21 +117,21 @@ export default function BlogPostHeader({
               </div>
             </div>
           </div>
-          <div className="mx-auto w-full overflow-hidden relative">
-            <img
-              src={
-                heroImage ||
-                "https://d22po4pjz3o32e.cloudfront.net/placeholder-image.svg"
-              }
-              className="aspect-[3/2] size-full object-cover"
-              alt="Relume placeholder image"
+
+          <div className="relative w-full overflow-hidden rounded-2xl border border-border-primary bg-background-secondary shadow-sm ring-1 ring-border-primary/50">
+            <ArticleSafeImage
+              src={heroImage}
+              alt=""
+              fallback={ARTICLE_IMAGE_FALLBACK}
+              className="aspect-[3/2] w-full object-cover"
+              loading="eager"
             />
-            {canEdit && (
+            {canEdit && onEditHero && (
               <button
                 type="button"
                 onClick={onEditHero}
-                className="absolute right-3 top-3 rounded-full border border-border-primary bg-background-primary p-2 text-xs hover:bg-background-secondary"
-                title="Edit hero image"
+                className="absolute right-3 top-3 rounded-full border border-border-primary bg-background-primary p-2 text-muted-foreground shadow-sm transition hover:bg-background-secondary"
+                title="Edit hero image URL"
               >
                 <RxPencil1 className="size-4" />
               </button>

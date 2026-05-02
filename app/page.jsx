@@ -14,9 +14,9 @@ export default async function Page() {
     <div>
       <Suspense
         fallback={
-          <div className="border-b border-border-primary bg-background-secondary px-[5%] py-6 md:py-8">
-            <div className="container max-w-5xl">
-              <LoadingGrid columns={3} rows={1} height="6rem" />
+          <div className="border-b border-border-primary bg-background-secondary/50 px-[5%] py-3 md:py-4">
+            <div className="mx-auto max-w-3xl">
+              <LoadingGrid columns={3} rows={1} height="3.5rem" />
             </div>
           </div>
         }

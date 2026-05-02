@@ -47,10 +47,20 @@ export default async function Page({ searchParams }) {
 
   const heroImage = article?.media?.[0]?.url;
   const contentImage = article?.media?.[1]?.url;
+  /** OPED only: hero + inline figure use media[0] and media[1]; remaining IMAGE rows render below. */
+  const opedGalleryMedia =
+    article?.type === "OPED"
+      ? (article.media || [])
+          .slice(2)
+          .filter((m) => m?.type === "IMAGE" && m?.url)
+          .sort(
+            (a, b) =>
+              new Date(a.createdAt || 0).getTime() -
+              new Date(b.createdAt || 0).getTime()
+          )
+      : [];
   const authorName = article?.author?.name || "CAP Contributor";
-  const authorTitle = article?.author?.email
-    ? article.author.email
-    : "Researcher, CAP";
+  const authorEmail = article?.author?.email || "";
   const tags = [article?.type, article?.slug].filter(Boolean);
 
   return (
@@ -59,11 +69,12 @@ export default async function Page({ searchParams }) {
         article={article}
         isPrivileged={isPrivileged}
         authorName={authorName}
-        authorTitle={authorTitle}
+        authorEmail={authorEmail}
         heroImage={heroImage}
         heroId={article?.media?.[0]?.id}
         contentImage={contentImage}
         contentMediaId={article?.media?.[1]?.id}
+        galleryMedia={opedGalleryMedia}
         tags={tags}
       />
       <CommentsSection
