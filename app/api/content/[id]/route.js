@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/session'
-import { canEditContent, isAdmin } from '@/lib/auth'
+import { canEditContent } from '@/lib/auth'
 
 const CONTENT_STATUSES = ['DRAFT', 'PUBLISHED', 'ARCHIVED']
 
@@ -244,17 +244,19 @@ export async function DELETE(request, { params }) {
       )
     }
 
-    // Only admin or content author can delete
-    if (!isAdmin(user) && content.authorId !== user.id) {
+    // Same rule as edit: author, or any editor/admin (see canEditContent)
+    if (!canEditContent(user, content)) {
       return NextResponse.json(
         { error: 'Forbidden: You do not have permission to delete this content' },
         { status: 403 }
       )
     }
 
-    await prisma.content.delete({
-      where: { id },
-    })
+    await prisma.$transaction([
+      prisma.comment.deleteMany({ where: { contentId: id } }),
+      prisma.media.deleteMany({ where: { contentId: id } }),
+      prisma.content.delete({ where: { id } }),
+    ])
 
     return NextResponse.json({ message: 'Content deleted successfully' })
   } catch (error) {

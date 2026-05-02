@@ -481,8 +481,14 @@ export default function AdminPortal({ userRole }) {
     await runAction(
       `content:delete:${id}`,
       async () => {
-        const res = await fetch(`/api/content/${id}`, { method: "DELETE" });
-        if (!res.ok) throw new Error("Failed to delete content");
+        const res = await fetch(`/api/content/${id}`, {
+          method: "DELETE",
+          credentials: "include",
+        });
+        if (!res.ok) {
+          const detail = await res.json().catch(() => ({}));
+          throw new Error(detail.error || "Failed to delete content");
+        }
         if (selectedContent?.id === id) {
           setShowEditModal(false);
           setSelectedContent(null);
